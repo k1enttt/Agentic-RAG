@@ -67,6 +67,15 @@ Giải thích cách người dùng tương tác với ứng dụng.
 ## Cấu Trúc Dự Án
 Để biết chi tiết về cấu trúc thư mục và quy ước phát triển, vui lòng tham khảo [docs/GEMINI.md](docs/GEMINI.md).
 
+## Tổng Quan Tài Liệu
+Phần này cung cấp tổng quan về các tài liệu chính trong thư mục `/docs`.
+
+*   **`design_document.md`**: Giải thích kiến trúc cấp cao của RAG agent, trình bày chi tiết các thành phần như LangGraph, ChromaDB, và các mô hình Gemini. Tài liệu này phác thảo trạng thái của agent và luồng logic từ phân loại câu hỏi đến sinh câu trả lời.
+*   **`GEMINI.md`**: Cung cấp ngữ cảnh cho Gemini CLI, mô tả dự án dưới dạng một agent dựa trên LangGraph, hướng dẫn build/run, các quy ước phát triển, cấu trúc dự án, và các mô hình ngôn ngữ được sử dụng.
+*   **`lessons_learned.md`**: Nhìn lại quá trình phát triển của dự án, bao gồm các thách thức và giải pháp liên quan đến đa luồng với SQLite, lợi ích của LangGraph, và tầm quan trọng của một cấu trúc dự án rõ ràng.
+*   **`plan_v1.md`**: Kế hoạch phát triển ban đầu, phác thảo các mục tiêu của dự án, các thành phần chính cần xây dựng, và cấu trúc dự án ban đầu.
+*   **`todo.md`**: Danh sách các công việc và cải tiến trong tương lai, bao gồm việc tăng cường khả năng duy trì lịch sử trò chuyện và đánh giá lại giải pháp đa luồng cho SQLite.
+
 ## Công Nghệ Sử Dụng
 *   **Framework:** LangGraph
 *   **Ngôn ngữ:** Python
