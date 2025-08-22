@@ -1,0 +1,6 @@
+langchain
+langgraph
+langchain_core
+langgraph-checkpoint-sqlite
+chromadb
+langchain-community
