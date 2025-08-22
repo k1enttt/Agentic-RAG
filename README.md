@@ -1,0 +1,95 @@
+# Agentic RAG CLI
+
+## Giới Thiệu
+Dự án này là một agent AI tương tác qua dòng lệnh, được xây dựng bằng LangGraph. Nó được thiết kế để trả lời các câu hỏi của người dùng bằng cách phân loại câu hỏi, truy xuất thông tin từ cơ sở tri thức (RAG) khi cần, và duy trì ngữ cảnh hội thoại.
+
+## Tính Năng
+Liệt kê các tính năng chính của ứng dụng.
+
+*   Phân loại câu hỏi (cần RAG hay không).
+*   Truy xuất thông tin từ ChromaDB.
+*   Sinh câu trả lời bằng mô hình Gemini 2.5 Flash.
+*   Duy trì lịch sử hội thoại bằng SQLite.
+*   Giao diện dòng lệnh tương tác.
+
+## Bắt Đầu
+Hướng dẫn cách thiết lập và chạy dự án.
+
+### Yêu Cầu Tiên Quyết
+Đảm bảo bạn đã cài đặt các phần mềm sau:
+
+*   Python 3.9+
+*   pip (Trình quản lý gói của Python)
+*   Ollama (Để chạy mô hình embeddings `bge-m3`)
+    *   Tải và cài đặt Ollama từ [ollama.com](https://ollama.com).
+    *   Sau khi cài đặt, tải mô hình `bge-m3` bằng lệnh: `ollama pull bge-m3`
+*   Google API Key (Để sử dụng mô hình Gemini 2.5 Flash)
+    *   Tạo file `.env` ở thư mục gốc của dự án.
+    *   Thêm dòng sau vào file `.env` (thay `YOUR_GOOGLE_API_KEY_HERE` bằng API key của bạn):
+        ```
+        GOOGLE_API_KEY="YOUR_GOOGLE_API_KEY_HERE"
+        ```
+
+### Cài Đặt
+1.  Clone repository:
+    ```bash
+    git clone <URL_CỦA_DỰ_ÁN>
+    cd <TÊN_THƯ_MỤC_DỰ_ÁN_CỦA_BẠN>
+    ```
+2.  Tạo và kích hoạt môi trường ảo (khuyến nghị):
+    ```bash
+    python -m venv .venv
+    # Trên Windows
+    .venv\Scripts\activate
+    # Trên macOS/Linux
+    source .venv/bin/activate
+    ```
+3.  Cài đặt các thư viện cần thiết:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+### Chạy Ứng Dụng
+Từ thư mục gốc của dự án, chạy lệnh sau:
+```bash
+python src/main.py
+```
+Ứng dụng sẽ khởi động và bạn có thể bắt đầu tương tác qua dòng lệnh.
+
+## Cách Sử Dụng
+Giải thích cách người dùng tương tác với ứng dụng.
+
+*   Khi ứng dụng chạy, bạn sẽ thấy lời nhắc `User:`. Nhập câu hỏi của bạn và nhấn Enter.
+*   Agent sẽ xử lý câu hỏi và in ra câu trả lời.
+*   Để thoát khỏi cuộc trò chuyện, gõ `quit` hoặc `exit`.
+*   Lịch sử trò chuyện được lưu trữ trong `storage/memory.sqlite` và sẽ được tải lại khi bạn khởi động lại ứng dụng (với cùng `thread_id` - xem `docs/todo.md` để biết cách cải thiện).
+
+## Cấu Trúc Dự Án
+Để biết chi tiết về cấu trúc thư mục và quy ước phát triển, vui lòng tham khảo [docs/GEMINI.md](docs/GEMINI.md).
+
+## Công Nghệ Sử Dụng
+*   **Framework:** LangGraph
+*   **Ngôn ngữ:** Python
+*   **LLM:** Gemini 2.5 Flash
+*   **Embeddings:** bge-m3 (qua Ollama)
+*   **Vector Database:** ChromaDB
+*   **Persistence:** SQLite (qua LangGraph's SqliteSaver)
+*   **Quản lý môi trường:** `venv`
+*   **Quản lý biến môi trường:** `python-dotenv`
+
+## Đóng Góp
+Nếu bạn muốn đóng góp cho dự án, vui lòng làm theo các bước sau:
+
+1.  Fork repository.
+2.  Tạo một branch mới (`git checkout -b feature/your-feature-name`).
+3.  Thực hiện các thay đổi của bạn.
+4.  Viết các bài kiểm thử (nếu có thể).
+5.  Commit các thay đổi (`git commit -m 'feat: Add new feature'`).
+6.  Push lên branch của bạn (`git push origin feature/your-feature-name`).
+7.  Mở một Pull Request.
+
+## Giấy Phép
+Dự án này được cấp phép theo Giấy phép MIT. Xem file `LICENSE` để biết thêm chi tiết. (Nếu bạn có file LICENSE)
+
+## Liên Hệ
+Nếu có bất kỳ câu hỏi hoặc vấn đề nào, vui lòng liên hệ **Kiên Tạ** qua email **kientathuc@gmail.com**.

@@ -4,3 +4,7 @@ langchain_core
 langgraph-checkpoint-sqlite
 chromadb
 langchain-community
+langchain-google-genai
+python-dotenv
+langchain-ollama
+langchain-chroma
