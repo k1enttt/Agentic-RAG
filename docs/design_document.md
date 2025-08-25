@@ -13,24 +13,27 @@ Luồng công việc của agent được thiết kế để xử lý câu hỏi
 1. Nhận câu hỏi của user
    |
    V
-2. Phân loại câu hỏi (Cần retrieve data? Hay trả lời luôn?)
+2. Phân loại câu hỏi (purchase? retrieve? hay generate?)
    |
-   +
-   |                            |
-   V                            V
-3. Chạy retrieve để lấy context  4. Tiến hành trả lời (context = "")
-   |                            ^
-   +
+   +-----------------------------------------------------------------+
+   |                                 |                               |
+   V                                 V                               V
+3. Trích xuất thực thể sản phẩm      4. Chạy retrieve để lấy context   5. Tiến hành trả lời (kiến thức chung)
+   |                                 |                               ^
+   +---------------------------------+                               |
+   |                                                                 |
+   V                                                                 |
+6. Truy vấn Saleor API để tìm sản phẩm                               |
+   |                                                                 |
+   +-----------------------------------------------------------------+
    |
-   +
-   |                                          |
-   V                                          V
-5. Hỏi user có muốn hỏi tiếp hay không?
+   V
+7. Hỏi user có muốn hỏi tiếp hay không?
    |
-   +
-   |                        |
-   V                        V
-1. Nhận câu hỏi của user    6. END
+   +---------------------------------+
+   |                                 |
+   V                                 V
+1. Nhận câu hỏi của user             8. END
 ```
 
 ## 2. Mô tả các Node
@@ -126,5 +129,3 @@ class AgentState(TypedDict):
     *   Sử dụng `add_node`, `set_entry_point`, `add_edge`, `add_conditional_edges` của LangGraph để xây dựng luồng.
 6.  **Kiểm thử:**
     *   Chạy thử nghiệm từng phần và toàn bộ luồng để đảm bảo hoạt động đúng như thiết kế.
-
-```

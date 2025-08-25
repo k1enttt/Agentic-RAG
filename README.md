@@ -11,6 +11,7 @@ Liệt kê các tính năng chính của ứng dụng.
 *   Sinh câu trả lời bằng mô hình Gemini 2.5 Flash.
 *   Duy trì lịch sử hội thoại bằng SQLite.
 *   Giao diện dòng lệnh tương tác.
+*   **Xử lý ý định mua hàng và truy vấn sản phẩm từ Saleor API.**
 
 ## Bắt Đầu
 Hướng dẫn cách thiết lập và chạy dự án.
@@ -28,6 +29,14 @@ Hướng dẫn cách thiết lập và chạy dự án.
     *   Thêm dòng sau vào file `.env` (thay `YOUR_GOOGLE_API_KEY_HERE` bằng API key của bạn):
         ```
         GOOGLE_API_KEY="YOUR_GOOGLE_API_KEY_HERE"
+        ```
+*   **Saleor Instance (Để truy vấn sản phẩm)**
+    *   Đảm bảo bạn có một Saleor instance đang chạy (ví dụ: `http://localhost:8000`).
+    *   Thêm các biến sau vào file `.env`:
+        ```
+        SALEOR_API_URL="http://localhost:8000/graphql/"
+        SALEOR_API_EMAIL="your_saleor_email@example.com"
+        SALEOR_API_PASSWORD="your_saleor_password"
         ```
 
 ### Cài Đặt
@@ -63,8 +72,28 @@ Giải thích cách người dùng tương tác với ứng dụng.
 *   Agent sẽ xử lý câu hỏi và in ra câu trả lời.
 *   Để thoát khỏi cuộc trò chuyện, gõ `quit` hoặc `exit`.
 *   Lịch sử trò chuyện được lưu trữ trong `storage/memory.sqlite` và sẽ được tải lại khi bạn khởi động lại ứng dụng (với cùng `thread_id` - xem `docs/todo.md` để biết cách cải thiện).
+*   **Để hỏi về sản phẩm:** Bạn có thể nhập các câu hỏi như "tôi muốn mua áo thun màu xanh", "bạn có bán The Dash Cushion không?" hoặc "giá của Apple Juice là bao nhiêu?". Agent sẽ tìm kiếm và hiển thị thông tin sản phẩm.
 
-## Cấu Trúc Dự Án
+## Cấu Trúc Thư Mục Chính
+Dưới đây là cái nhìn tổng quan về cấu trúc thư mục chính của dự án:
+
+```
+agentic-rag-3/
+├── .env                  # Biến môi trường (API keys, cấu hình Saleor)
+├── requirements.txt      # Danh sách các thư viện Python cần thiết
+├── docs/                 # Chứa tất cả các tài liệu dự án
+├── src/                  # Mã nguồn chính của ứng dụng
+│   ├── main.py           # Điểm khởi chạy chính của ứng dụng
+│   ├── config.py         # Các hằng số cấu hình toàn dự án
+│   ├── core/             # Logic cốt lõi của agent (AgentState)
+│   ├── setup/            # Cấu hình LLM, Embeddings, Vector Store
+│   ├── graph/            # Các node và định nghĩa LangGraph
+│   └── services/         # Các dịch vụ bên ngoài (ví dụ: Saleor API)
+├── data/                 # Dữ liệu thô cho RAG (ví dụ: sample_data.txt)
+└── storage/              # Dữ liệu bền vững (ChromaDB, SQLite)
+```
+
+## Tài liệu chi tiết về cấu trúc dự án
 Để biết chi tiết về cấu trúc thư mục và quy ước phát triển, vui lòng tham khảo [docs/GEMINI.md](docs/GEMINI.md).
 
 ## Tổng Quan Tài Liệu
