@@ -1,131 +1,110 @@
-# Thiết kế Luồng Agent LangGraph
+# Thiết kế Luồng Agent LangGraph (Cập nhật)
 
-Tài liệu này mô tả thiết kế luồng (flow) cho một agent sử dụng LangGraph, bao gồm các node, edges, cấu trúc trạng thái và kế hoạch triển khai.
+Tài liệu này mô tả thiết kế luồng (flow) cho một agent sử dụng LangGraph, đã được cập nhật để phản ánh chính xác code hiện tại.
 
 ## 1. Luồng Công việc Tổng thể
 
-Luồng công việc của agent được thiết kế để xử lý câu hỏi của người dùng, truy xuất thông tin khi cần, trả lời và quản lý phiên hội thoại.
+Luồng công việc của agent được thiết kế để xử lý câu hỏi của người dùng bằng cách phân loại chúng vào một trong ba luồng xử lý chính: **Purchase** (ý định mua hàng), **Retrieve** (truy xuất thông tin từ RAG), và **Generate** (trả lời bằng kiến thức chung).
 
 ```
 0. START
    |
    V
-1. Nhận câu hỏi của user
+1. Nhận câu hỏi của user (`receive_question`)
    |
    V
-2. Phân loại câu hỏi (purchase? retrieve? hay generate?)
+2. Phân loại câu hỏi (`classify_question`)
    |
-   +-----------------------------------------------------------------+
-   |                                 |                               |
-   V                                 V                               V
-3. Trích xuất thực thể sản phẩm      4. Chạy retrieve để lấy context   5. Tiến hành trả lời (kiến thức chung)
-   |                                 |                               ^
-   +---------------------------------+                               |
-   |                                                                 |
-   V                                                                 |
-6. Truy vấn Saleor API để tìm sản phẩm                               |
-   |                                                                 |
-   +-----------------------------------------------------------------+
+   +------------------+------------------+
+   | (purchase)       | (retrieve)       | (generate)
+   V                  V                  V
+3. Trích xuất        4. Lấy context     5. Sinh câu trả lời (`generate_answer`)
+   thực thể sản phẩm    từ VectorDB         |
+   (`extract_entities`) (`retrieve_context`)  |
+   |                  |                  |
+   V                  V                  |
+6. Truy vấn Saleor   5. Sinh câu trả lời -> |
+   API (`query_saleor`) (`generate_answer`)   |
+   |                  |                  |
+   |                  |                  |
+   +------------------+------------------+
    |
    V
-7. Hỏi user có muốn hỏi tiếp hay không?
+7. Hỏi user có muốn hỏi tiếp (`ask_to_continue`)
    |
-   +---------------------------------+
-   |                                 |
-   V                                 V
-1. Nhận câu hỏi của user             8. END
+   +------------------+
+   |                  |
+   V                  V
+(Vòng lặp mới)       8. END
 ```
 
 ## 2. Mô tả các Node
 
 Mỗi node đại diện cho một bước xử lý cụ thể trong luồng:
 
-*   **Node 0: START**
-    *   Điểm bắt đầu của mọi phiên làm việc.
-*   **Node 1: Nhận câu hỏi của user**
-    *   **Mục đích:** Tiếp nhận câu hỏi mới từ người dùng.
-    *   **Hành động:** Cập nhật `question` trong `AgentState`.
-*   **Node 2: Phân loại câu hỏi**
-    *   **Mục đích:** Xác định xem câu hỏi có thể được trả lời ngay lập tức (dựa trên kiến thức nội tại hoặc lịch sử hội thoại) hay cần phải truy xuất dữ liệu bên ngoài.
-    *   **Hành động:** Phân tích `question` và `chat_history`.
-    *   **Kết quả:** Quyết định chuyển đến Node 3 (Retrieve) hoặc Node 4 (Trả lời trực tiếp).
-    *   *(Chi tiết cơ chế phân loại sẽ được mô tả sau.)*
-*   **Node 3: Chạy retrieve để lấy context**
-    *   **Mục đích:** Thực hiện truy vấn đến cơ sở dữ liệu kiến thức (vector DB, v.v.) để lấy các đoạn văn bản (context) liên quan đến câu hỏi.
-    *   **Hành động:** Sử dụng `question` để truy vấn. Cập nhật `context` vào `AgentState`.
-    *   **Kết quả:**
-        *   Thành công: Chuyển đến Node 4.
-        *   Thất bại/Không tìm thấy context phù hợp: Chuyển đến Node 5 (để thông báo không thể trả lời và hỏi tiếp).
-*   **Node 4: Tiến hành trả lời**
-    *   **Mục đích:** Tạo ra câu trả lời cuối cùng cho người dùng.
-    *   **Hành động:** Sử dụng LLM để tổng hợp câu trả lời dựa trên `question`, `context` (nếu có) và `chat_history`. Cập nhật `answer` vào `AgentState`.
-*   **Node 5: Hỏi user có muốn hỏi tiếp hay không?**
-    *   **Mục đích:** Tương tác với người dùng để xác định xem họ muốn tiếp tục cuộc hội thoại hay kết thúc. Node này cũng là điểm hội tụ cho trường hợp agent không thể trả lời câu hỏi.
-    *   **Hành động:** Gửi câu hỏi cho người dùng (ví dụ: "Bạn có muốn hỏi gì thêm không?"). Sử dụng LLM để phân tích phản hồi của người dùng.
-    *   **Kết quả:**
-        *   Muốn hỏi tiếp: Chuyển về Node 1.
-        *   Muốn chấm dứt: Chuyển đến Node 6.
-*   **Node 6: END**
-    *   Điểm kết thúc của phiên làm việc.
+*   **`receive_question`**: Tiếp nhận câu hỏi mới từ người dùng và cập nhật `question` trong `AgentState`.
+*   **`classify_question`**: Phân tích câu hỏi để quyết định luồng xử lý tiếp theo.
+    *   **Hành động:** Sử dụng LLM để phân loại câu hỏi thành một trong ba loại: `purchase`, `retrieve`, hoặc `generate`.
+    *   **Kết quả:** Cập nhật `classification_decision` trong `AgentState` và điều hướng luồng.
+*   **`extract_entities` (Luồng Purchase)**: Trích xuất các thông tin chi tiết về sản phẩm (tên, màu, size,...) từ câu hỏi của người dùng.
+    *   **Hành động:** Sử dụng LLM để phân tích `question` và trích xuất các thực thể.
+    *   **Kết quả:** Cập nhật `extracted_entities` vào `AgentState`.
+*   **`query_saleor` (Luồng Purchase)**: Sử dụng các thực thể đã trích xuất để truy vấn sản phẩm thông qua Saleor API.
+    *   **Hành động:** Gửi request đến Saleor GraphQL API.
+    *   **Kết quả:** Cập nhật `saleor_products` (hoặc `saleor_error`) vào `AgentState`.
+*   **`retrieve_context` (Luồng Retrieve)**: Truy vấn cơ sở dữ liệu vector (ChromaDB) để lấy context liên quan đến câu hỏi.
+    *   **Hành động:** Sử dụng `question` để thực hiện tìm kiếm tương đồng.
+    *   **Kết quả:** Cập nhật `context` vào `AgentState`.
+*   **`generate_answer` (Luồng Retrieve & Generate)**: Tạo ra câu trả lời cuối cùng cho người dùng.
+    *   **Hành động:** Sử dụng LLM để tổng hợp câu trả lời dựa trên `question`, `context` (nếu có từ luồng retrieve) và `chat_history`.
+    *   **Kết quả:** Cập nhật `answer` vào `AgentState`.
+*   **`ask_to_continue`**: Điểm kết thúc của một lượt xử lý, chờ đợi input tiếp theo từ người dùng. Trong code hiện tại, node này chỉ mang tính hình thức và vòng lặp được quản lý bên ngoài graph.
 
 ## 3. Mô tả các Edges
 
 Các edges định nghĩa luồng chuyển đổi giữa các node:
 
-*   **START -> Node 1:** Luôn luôn chuyển từ START đến Node 1 để nhận câu hỏi đầu tiên.
-*   **Node 1 -> Node 2:** Luôn luôn chuyển từ Node 1 đến Node 2 để phân loại câu hỏi.
-*   **Node 2 (Conditional Edge):**
-    *   Nếu cần retrieve data: Chuyển đến Node 3.
-    *   Nếu có thể trả lời luôn: Chuyển đến Node 4.
-*   **Node 3 (Conditional Edge):**
-    *   Nếu retrieve thành công và có context: Chuyển đến Node 4.
-    *   Nếu retrieve thất bại hoặc không có context phù hợp: Chuyển đến Node 5.
-*   **Node 4 -> Node 5:** Luôn luôn chuyển từ Node 4 đến Node 5 sau khi đã trả lời.
-*   **Node 5 (Conditional Edge):**
-    *   Nếu người dùng muốn hỏi tiếp: Chuyển về Node 1 (tạo một chu trình).
-    *   Nếu người dùng muốn chấm dứt hội thoại: Chuyển đến Node 6.
+*   **`receive_question` -> `classify_question`**: Luôn luôn chuyển tiếp để phân loại câu hỏi.
+*   **`classify_question` (Conditional Edge)**:
+    *   Nếu `classification_decision` là `purchase`: Chuyển đến `extract_entities`.
+    *   Nếu `classification_decision` là `retrieve`: Chuyển đến `retrieve_context`.
+    *   Nếu `classification_decision` là `generate`: Chuyển đến `generate_answer`.
+*   **`extract_entities` -> `query_saleor`**: Sau khi trích xuất thực thể, luôn truy vấn Saleor.
+*   **`retrieve_context` -> `generate_answer`**: Sau khi lấy context, luôn sinh câu trả lời.
+*   **`generate_answer` -> `ask_to_continue`**: Sau khi sinh câu trả lời, kết thúc lượt.
+*   **`query_saleor` -> `ask_to_continue`**: Sau khi truy vấn Saleor, kết thúc lượt.
+*   **`ask_to_continue` -> `END`**: Kết thúc một chu trình thực thi của graph.
 
 ## 4. Cấu trúc Trạng thái (AgentState)
 
-Trạng thái của agent sẽ được lưu trữ trong một `TypedDict` và được truyền giữa các node. Trạng thái này cũng sẽ được lưu trữ vào cơ sở dữ liệu SQLite để duy trì phiên làm việc.
+Trạng thái của agent đã được mở rộng để hỗ trợ các luồng mới.
 
 ```python
-from typing import List, TypedDict, Optional
+from typing import List, TypedDict, Optional, Dict, Any
 
 class Message(TypedDict):
-    role: str # 'user' hoặc 'assistant'
+    role: str  # 'user' or 'assistant'
     content: str
 
 class AgentState(TypedDict):
     """
     Đại diện cho trạng thái của agent trong suốt cuộc hội thoại.
     """
-    question: str # Câu hỏi hiện tại của người dùng
-    context: Optional[str] # Context đã retrieve được (nếu có)
-    answer: Optional[str] # Câu trả lời của agent
-    chat_history: List[Message] # Lịch sử toàn bộ cuộc hội thoại (câu hỏi và trả lời)
-    # Các trường bổ sung có thể được thêm vào sau này nếu cần
+    question: str
+    context: Optional[str]
+    answer: Optional[str]
+    chat_history: List[Message]
+    classification_decision: Optional[str] # Quyết định: 'purchase', 'retrieve', 'generate'
+    
+    # Các trường được thêm vào trong quá trình chạy
+    extracted_entities: Optional[Dict[str, Any]] # Kết quả từ node extract_entities
+    saleor_products: Optional[List[Dict[str, Any]]] # Kết quả sản phẩm từ Saleor
+    saleor_error: Optional[str] # Lỗi nếu có từ Saleor
 ```
 
 ## 5. Lưu trữ Trạng thái (Persistence)
 
-*   **Cơ sở dữ liệu:** SQLite sẽ được sử dụng để lưu trữ trạng thái của agent.
-*   **Cơ chế:** LangGraph cung cấp `SqliteSaver` để dễ dàng tích hợp. Mỗi phiên hội thoại sẽ có một ID riêng biệt, và trạng thái của nó sẽ được lưu trữ và khôi phục từ file SQLite.
+*   **Cơ sở dữ liệu:** SQLite vẫn được sử dụng để lưu trữ trạng thái của agent.
+*   **Cơ chế:** LangGraph `SqliteSaver` được sử dụng để tự động lưu và khôi phục trạng thái cho mỗi phiên hội thoại (`thread_id`).
 
-## 6. Các bước Triển khai Tiếp theo
-
-Để bắt đầu xây dựng agent này, các bước sau đây được đề xuất:
-
-1.  **Cài đặt môi trường:**
-    *   Tạo thư mục dự án.
-    *   Cài đặt các thư viện Python cần thiết: `langchain`, `langgraph`, `python-dotenv`.
-2.  **Định nghĩa `AgentState`:**
-    *   Tạo file `state.py` và định nghĩa `AgentState` như trên.
-3.  **Khởi tạo LangGraph và `SqliteSaver`:**
-    *   Trong file `main.py` (hoặc tương tự), khởi tạo `StateGraph` và `SqliteSaver`.
-4.  **Triển khai các Node (hàm Python):**
-    *   Viết các hàm Python tương ứng với mỗi node (Node 1, Node 2 (placeholder), Node 3, Node 4, Node 5).
-5.  **Định nghĩa các Edges:**
-    *   Sử dụng `add_node`, `set_entry_point`, `add_edge`, `add_conditional_edges` của LangGraph để xây dựng luồng.
-6.  **Kiểm thử:**
-    *   Chạy thử nghiệm từng phần và toàn bộ luồng để đảm bảo hoạt động đúng như thiết kế.
+Việc cập nhật này đảm bảo tài liệu thiết kế phản ánh đúng kiến trúc và luồng hoạt động của ứng dụng hiện tại.
