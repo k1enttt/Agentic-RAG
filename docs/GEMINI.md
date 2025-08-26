@@ -61,7 +61,7 @@ agentic-rag-3/
 └── checkpoints/            # (Giữ lại, mặc dù hiện tại trống, có thể dùng sau)
 ```
 
-*   **`src/core/state.py`**: Định nghĩa `AgentState` `TypedDict`. `TypedDict` này đại diện cho trạng thái của agent, bao gồm `question`, `context`, `answer`, và `chat_history`. Việc tách riêng file này giúp định nghĩa trạng thái rõ ràng và tái sử dụng được.
+*   **`src/core/state.py`**: Định nghĩa `AgentState` `TypedDict`. `TypedDict` này đại diện cho trạng thái của agent, bao gồm `question`, `context`, `answer`, `chat_history`, `classification_decision`, và `extracted_entities`. Việc tách riêng file này giúp định nghĩa trạng thái rõ ràng và tái sử dụng được.
 *   **`src/main.py`**: Đây là điểm khởi chạy chính của ứng dụng. Nó chứa logic cốt lõi để xây dựng LangGraph agent, bao gồm khởi tạo `StateGraph`, định nghĩa các cạnh, thiết lập `SqliteSaver` để duy trì trạng thái, và chạy vòng lặp chính để nhận input từ người dùng và thực thi graph.
 
 ## Language Models

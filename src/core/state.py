@@ -12,4 +12,5 @@ class AgentState(TypedDict):
     context: Optional[str]  # Context đã retrieve được (nếu có)
     answer: Optional[str]  # Câu trả lời của agent
     chat_history: List[Message]  # Lịch sử toàn bộ cuộc hội thoại
-    classification_decision: Optional[str] # Quyết định phân loại: 'retrieve' hoặc 'generate'
+    classification_decision: Optional[str] # Quyết định phân loại: 'purchase', 'general_fashion_inquiry', 'off_topic'
+    extracted_entities: Optional[dict] # Các thực thể sản phẩm được trích xuất từ câu hỏi của người dùng

@@ -20,7 +20,9 @@ from src.graph.nodes import (
     node_generate_answer,
     node_ask_to_continue,
     node_extract_entities,
-    node_query_saleor, # Import the new Saleor query node
+    node_query_saleor,
+    node_handle_general_inquiry, # New node
+    node_handle_off_topic,      # New node
 )
 
 # Xây dựng Graph
@@ -29,11 +31,13 @@ workflow = StateGraph(AgentState)
 # Thêm các node
 workflow.add_node("receive_question", node_receive_question)
 workflow.add_node("classify_question", node_classify_question)
-workflow.add_node("retrieve_context", node_retrieve_context)
+workflow.add_node("retrieve_context", node_retrieve_context) # Keep for now, might be used by handle_general_inquiry
 workflow.add_node("generate_answer", node_generate_answer)
 workflow.add_node("ask_to_continue", node_ask_to_continue)
 workflow.add_node("extract_entities", node_extract_entities)
-workflow.add_node("query_saleor", node_query_saleor) # Add the new Saleor query node
+workflow.add_node("query_saleor", node_query_saleor)
+workflow.add_node("handle_general_inquiry", node_handle_general_inquiry) # New node
+workflow.add_node("handle_off_topic", node_handle_off_topic)      # New node
 
 # Đặt entry point
 workflow.set_entry_point("receive_question")
@@ -47,24 +51,31 @@ workflow.add_edge("generate_answer", "ask_to_continue")
 workflow.add_edge("extract_entities", "query_saleor")
 workflow.add_edge("query_saleor", "ask_to_continue")
 
+# New edges for general inquiry and off-topic flows
+workflow.add_edge("handle_general_inquiry", "generate_answer")
+workflow.add_edge("handle_off_topic", "ask_to_continue")
+
 # Thêm cạnh điều kiện sau khi phân loại
 def route_after_classification(state: AgentState):
     """Routing function to decide the next step based on classification."""
     decision = state.get("classification_decision")
     if decision == "purchase":
         return "extract_entities"
-    elif decision == "retrieve":
-        return "retrieve_context"
-    else: # generate
-        return "generate_answer"
+    elif decision == "general_fashion_inquiry":
+        return "handle_general_inquiry"
+    elif decision == "off_topic":
+        return "handle_off_topic"
+    else: # Fallback, though classify_question should always return one of the above
+        return "generate_answer" # Or a dedicated error handling node
 
 workflow.add_conditional_edges(
     "classify_question",
     route_after_classification,
     {
         "extract_entities": "extract_entities",
-        "retrieve_context": "retrieve_context",
-        "generate_answer": "generate_answer",
+        "handle_general_inquiry": "handle_general_inquiry",
+        "handle_off_topic": "handle_off_topic",
+        "generate_answer": "generate_answer", # Fallback, if route_after_classification returns this
     }
 )
 
@@ -79,7 +90,8 @@ app = workflow.compile(checkpointer=memory)
 
 if __name__ == "__main__":
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
-    print("Bắt đầu cuộc trò chuyện mới. Gõ \'quit\' hoặc \'exit\' để thoát.")
+    print("Agent: Chào bạn! Mình là trợ lý tư vấn thời trang của cửa hàng. Rất vui được hỗ trợ bạn. Bạn đang tìm kiếm trang phục nào hay cần lời khuyên phối đồ không ạ?")
+    print("Gõ \'quit\' hoặc \'exit\' để thoát.")
 
     while True:
         user_input = input("User: ")
